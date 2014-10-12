@@ -1,6 +1,13 @@
 package com.example.android.sunshine1.data;
 
+import android.content.ContentUris;
+import android.content.UriMatcher;
+import android.net.Uri;
 import android.provider.BaseColumns;
+
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 /**
  * Created by Anahat.Babbar on 9/2/2014.
@@ -10,8 +17,82 @@ import android.provider.BaseColumns;
  * Defines table and column names for the weather database.
  */
 public class WeatherContract {
-    /* Inner class that defines the table contents of the weather table */
+
+    //Anahat - Adding static variables content authority and base uri for content providers and content resolvers
+    public static final String CONTENT_AUTHORITY = "com.example.android.sunshine1";
+    public static final Uri BASE_CONTENT_URI = Uri.parse("content://"+ CONTENT_AUTHORITY);
+    public static final String PATH_WEATHER = "weather";
+    public static final String PATH_LOCATION = "location";
+
+    //Anahat - Declaring the format in which the date will be stored in our db
+    public static final String DATE_FORMAT = "yyyyMMdd";
+
+    //Anahat - Adding a static method to convert teh dates in the required format. Converts date into a string for easy comparisons.
+    public static String getDbDateString(Date date){
+        SimpleDateFormat sdf = new SimpleDateFormat(DATE_FORMAT);
+        return sdf.format(date);
+    }
+
+    //Anahat - The method below is to return the date in a good format and not in the way it is stored in DB
+    /**
+     * Converts a dateText to a long Unix time representation
+     * @param dateText the input date string
+     * @return the Date object
+     */
+    public static Date getDateFromDb(String dateText) {
+        SimpleDateFormat dbDateFormat = new SimpleDateFormat(DATE_FORMAT);
+        try {
+            return dbDateFormat.parse(dateText);
+        } catch ( ParseException e ) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+        /* Inner class that defines the table contents of the weather table */
     public static final class WeatherEntry implements BaseColumns {
+
+        //Anahat - Adding constants for content URI
+        public static final Uri CONTENT_URI = BASE_CONTENT_URI.buildUpon().appendPath(PATH_WEATHER).build();
+
+        //Anahat - Adding content type for this table to return a list of values
+        public static final String CONTENT_TYPE =
+                "vnd.android.cursor.dir/" + CONTENT_AUTHORITY + "/" + PATH_WEATHER;
+
+        //Anahat - Adding content item for this table to return just an item
+        public static final String CONTENT_ITEM_TYPE =
+                "vnd.android.cursor.item/" + CONTENT_AUTHORITY + "/" + PATH_WEATHER ;
+
+         //Anahat - Adding uri build and return method in weather entry so that the calling process is agnostic to how the uri is built for different query types
+        public static Uri buildWeatherUri(long id) {
+            return ContentUris.withAppendedId(CONTENT_URI, id);
+        }
+
+        public static Uri buildWeatherLocation(String locationSetting) {
+            return CONTENT_URI.buildUpon().appendPath(locationSetting).build();
+        }
+
+        public static Uri buildWeatherLocationWithStartDate(String locationSetting, String startDate) {
+            return CONTENT_URI.buildUpon().appendPath(locationSetting).appendQueryParameter(COLUMN_DATETEXT, startDate).build();
+        }
+
+        public static Uri buildWeatherLocationWithDate(String locationSetting, String date) {
+            return CONTENT_URI.buildUpon().appendPath(locationSetting).appendPath(date).build();
+        }
+
+        public static String getLocationSettingFromUri(Uri uri) {
+            return uri.getPathSegments().get(1);
+        }
+
+        public static String getDateFromUri(Uri uri) {
+            return uri.getPathSegments().get(2);
+        }
+
+        public static String getStartDateFromUri(Uri uri) {
+            return uri.getQueryParameter(COLUMN_DATETEXT);
+        }
+
+
 
         public static final String TABLE_NAME = "weather";
 
@@ -44,6 +125,22 @@ public class WeatherContract {
     }
 
     public static final class LocationEntry implements BaseColumns{
+
+        //Anahat - Adding content uri for content provider and content resolvers
+        public static final Uri CONTENT_URI = BASE_CONTENT_URI.buildUpon().appendPath(PATH_LOCATION).build();
+
+        //Anahat - Adding content type and item type for this table
+        public static final String CONTENT_TYPE =
+                "vnd.android.cursor.dir/" + CONTENT_AUTHORITY + "/" + PATH_LOCATION;
+
+        public static final String CONTENT_ITEM_TYPE =
+                "vnd.android.cursor.item/" + CONTENT_AUTHORITY + "/" + PATH_LOCATION ;
+
+        //Anahat - Adding uri build and return method in location entry so that the calling process is agnostic to how the uri is built for different query types
+        public static Uri buildLocationUri(long id) {
+            return ContentUris.withAppendedId(CONTENT_URI, id);
+        }
+
         //Anahat - This is table name
         public static final String TABLE_NAME = "location";
 

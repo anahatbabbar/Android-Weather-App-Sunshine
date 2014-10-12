@@ -23,6 +23,7 @@
             android:name=".DetailActivity"
             android:label="@string/title_activity_detail"
             android:parentActivityName=".MainActivity" >
+            <!-- Parent activity meta-data to support 4.0 and lower. For 4.1 and above, the line above was good enough -->
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="com.example.android.sunshine1.MainActivity" />
@@ -35,6 +36,12 @@
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="com.example.android.sunshine1.MainActivity" />
         </activity>
+
+        <!-- Anahat - Content Provider added in the manifest file so that Content Resolver can find it -->
+        <provider
+            android:authorities="com.example.android.sunshine1"
+            android:name=".data.WeatherProvider" />
+
     </application>
 
 </manifest>

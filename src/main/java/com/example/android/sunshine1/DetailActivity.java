@@ -1,6 +1,11 @@
 package com.example.android.sunshine1;
 
 import android.content.Intent;
+import android.database.Cursor;
+import android.net.Uri;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.CursorLoader;
+import android.support.v4.content.Loader;
 import android.support.v4.view.MenuItemCompat;
 import android.support.v7.app.ActionBarActivity;
 import android.support.v7.app.ActionBar;
@@ -19,8 +24,24 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import com.example.android.sunshine1.R;
+import com.example.android.sunshine1.data.WeatherContract;
 
 public class DetailActivity extends ActionBarActivity {
+
+    // Anahat - Loader code
+    private static final int DETAIL_LOADER = 0;
+
+    public static final String DATE_KEY = "date";
+    public static final String LOCATION_KEY = "location";
+
+    // These indices are tied to FORECAST_COLUMNS.  If FORECAST_COLUMNS changes, these
+    // must change.
+    public static final int COL_WEATHER_ID = 0;
+    public static final int COL_WEATHER_DATE = 1;
+    public static final int COL_WEATHER_DESC = 2;
+    public static final int COL_WEATHER_MAX_TEMP = 3;
+    public static final int COL_WEATHER_MIN_TEMP = 4;
+    public static final int COL_LOCATION_SETTING = 5;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -58,9 +79,12 @@ public class DetailActivity extends ActionBarActivity {
     /**
      * A placeholder fragment containing a simple view.
      */
-    public static class PlaceholderFragment extends Fragment {
+    public static class PlaceholderFragment extends Fragment implements LoaderManager.LoaderCallbacks<Cursor>{
 
         private String forecastStr;
+        private String dateStr;
+        private String strLocation;
+
         private static String LOG_TAG = PlaceholderFragment.class.getName();
 
         public PlaceholderFragment() {
@@ -73,20 +97,40 @@ public class DetailActivity extends ActionBarActivity {
             super.onCreate(savedInstanceState);
             //Anahat - to set that the fragment has a options menu
             setHasOptionsMenu(true);
+
         }
+
+        //Anahat - Method overriden from Fragment Abstract class
+        @Override
+        public void onActivityCreated(Bundle savedInstanceState) {
+
+            super.onActivityCreated(savedInstanceState);
+
+           //Anahat - Grabbing the strLocation if it is already there, as saved in onsavedInstance() method i.e. if the fragment is already started once
+            if (null != savedInstanceState){
+                strLocation = savedInstanceState.getString(LOCATION_KEY);
+            }
+
+            //Anahat - Initializing the loader, which will call the loader background thread
+            getLoaderManager().initLoader(DETAIL_LOADER, null, this);
+        }
+
+        //Anahat - Here making sure that when this activity resumes after preference changes, the weather location is picked up again and weather info is refreshed
+        //Anahat - Thus the loader is refreshed.
+        @Override
+        public void onResume() {
+            super.onResume();
+            if (strLocation != null && !strLocation.equals(Utility.getPreferredLocation(getActivity()))) {
+                getLoaderManager().restartLoader(DETAIL_LOADER, null, this);
+            }
+        }
+
 
         @Override
         public View onCreateView(LayoutInflater inflater, ViewGroup container,
                 Bundle savedInstanceState) {
             View rootView = inflater.inflate(R.layout.fragment_detail, container, false);
 
-            //Anahat - Getting the weather string from Main Activity using the Intent passed to the activity.
-            Intent intent = getActivity().getIntent();
-            //Anahat - Search for the Bundle corresponding to EXTRA_TEXT added by calling activity
-            forecastStr = intent.getStringExtra(Intent.EXTRA_TEXT);
-            //Anahat - find the text view to set value to
-            TextView textView = (TextView)rootView.findViewById(R.id.detail_text);
-            textView.setText(forecastStr);
             return rootView;
         }
 
@@ -122,6 +166,92 @@ public class DetailActivity extends ActionBarActivity {
                 shareIntent.setType("text/plain");
                 shareIntent.putExtra(Intent.EXTRA_TEXT, shareStr);
                 return shareIntent;
+        }
+
+        //Anahat - Overriding this method from Fragment abstract class. This is to save the instance variable states. When we rotate the phone, the variables are lost
+        // Anahat - Thus we save those variables in bundles
+        @Override
+        public void onSaveInstanceState(Bundle outState) {
+            super.onSaveInstanceState(outState);
+            outState.putString(LOCATION_KEY, strLocation);
+        }
+
+        //Anahat - Now defining loader callback functions
+
+        @Override
+        public Loader<Cursor> onCreateLoader(int id, Bundle args) {
+            // This is called when a new Loader needs to be created.  This
+            // fragment only uses one loader, so we don't care about checking the id.
+
+            //Anahat - Getting the weather/date string from Main Activity using the Intent passed to the activity.
+            Intent intent = getActivity().getIntent();
+
+            //Anahat - Search for the date Bundle corresponding to EXTRA_TEXT added by calling activity
+            dateStr = intent.getStringExtra(DATE_KEY);
+
+           String[] FORECAST_COLUMNS = {
+                    // In this case the id needs to be fully qualified with a table name, since
+                    // the content provider joins the location & weather tables in the background
+                    // (both have an _id column)
+                    // On the one hand, that's annoying.  On the other, you can search the weather table
+                    // using the location set by the user, which is only in the Location table.
+                    // So the convenience is worth it.
+                    WeatherContract.WeatherEntry.TABLE_NAME + "." + WeatherContract.WeatherEntry._ID,
+                    WeatherContract.WeatherEntry.COLUMN_DATETEXT,
+                    WeatherContract.WeatherEntry.COLUMN_SHORT_DESC,
+                    WeatherContract.WeatherEntry.COLUMN_MAX_TEMP,
+                    WeatherContract.WeatherEntry.COLUMN_MIN_TEMP,
+                    WeatherContract.WeatherEntry.COLUMN_HUMIDITY,
+                    WeatherContract.WeatherEntry.COLUMN_PRESSURE,
+                    WeatherContract.WeatherEntry.COLUMN_WIND_SPEED,
+                    WeatherContract.WeatherEntry.COLUMN_DEGREES,
+                    WeatherContract.WeatherEntry.COLUMN_WEATHER_ID
+            };
+
+            strLocation = Utility.getPreferredLocation(getActivity());
+
+            Uri weatherForLocationAndDateUri = WeatherContract.WeatherEntry.buildWeatherLocationWithDate(strLocation, dateStr);
+
+            // Now create and return a CursorLoader that will take care of
+            // creating a Cursor for the data being displayed.
+            return new CursorLoader(
+                    getActivity(),
+                    weatherForLocationAndDateUri,
+                    FORECAST_COLUMNS,
+                    null,
+                    null,
+                    null
+            );
+        }
+
+        @Override
+        public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
+
+            if (data != null && data.moveToFirst()) {
+
+                //Anahat - Commenting the lines below that create a weather String that was intially passed to details screen.
+                String dateText = Utility.formatDate(data.getString(COL_WEATHER_DATE));
+                String descText = data.getString(COL_WEATHER_DESC);
+                String maxText = Utility.formatTemperature(Double.parseDouble(data.getString(COL_WEATHER_MAX_TEMP)), Utility.isMetric(getActivity()));
+                String minText = Utility.formatTemperature(Double.parseDouble(data.getString(COL_WEATHER_MIN_TEMP)), Utility.isMetric(getActivity()));
+
+                //Anahat - find the text view to set value to
+                TextView dateView = (TextView) getView().findViewById(R.id.detail_date_textview);
+                dateView.setText(dateText);
+                TextView descView = (TextView) getView().findViewById(R.id.detail_forecast_textview);
+                descView.setText(descText);
+                TextView maxView = (TextView) getView().findViewById(R.id.detail_high_textview);
+                maxView.setText(maxText);
+                TextView minView = (TextView) getView().findViewById(R.id.detail_low_textview);
+                minView.setText(minText);
+
+                forecastStr = String.format("%s - %s - %s/%s", dateText, descText, maxText, minText);
+            }
+        }
+
+        @Override
+        public void onLoaderReset(Loader<Cursor> loader) {
+
         }
     }
 }
