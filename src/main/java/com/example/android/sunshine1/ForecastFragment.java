@@ -72,7 +72,8 @@ public class ForecastFragment extends Fragment implements LoaderManager.LoaderCa
             WeatherEntry.COLUMN_SHORT_DESC,
             WeatherEntry.COLUMN_MAX_TEMP,
             WeatherEntry.COLUMN_MIN_TEMP,
-            LocationEntry.COLUMN_LOCATION_SETTING
+            LocationEntry.COLUMN_LOCATION_SETTING,
+            WeatherEntry.COLUMN_WEATHER_ID
     };
 
     // These indices are tied to FORECAST_COLUMNS.  If FORECAST_COLUMNS changes, these
@@ -83,15 +84,20 @@ public class ForecastFragment extends Fragment implements LoaderManager.LoaderCa
     public static final int COL_WEATHER_MAX_TEMP = 3;
     public static final int COL_WEATHER_MIN_TEMP = 4;
     public static final int COL_LOCATION_SETTING = 5;
+    public static final int COL_WEATHER_TYPEID = 6;
 
-    // Anahat - LoadManager eclaring stuff Ends her ---------------------------------------------
+    // Anahat - LoadManager declaring stuff Ends her ---------------------------------------------
 
     //Anahat - Bringing the adapter outside the scope of onCreateView so that it can be accessed and updated by onPostExecute method in AsyncTask
     //Anahat - Commenting out below line now because now we are using SimpleCursorAdaptor instead of ArrayAdaptor
 //    ArrayAdapter<String> mForecastAdapter;
 
     // Anahat - Now declaring mForecastAdapter variable as SimpleCursorAdaptor. Make sure it is from android.support.v4.widget package. Else it wont compile with later Android OSes
-    SimpleCursorAdapter mForecastAdapter;
+    //Anahat - commenting out the line below because we are now using our custom Cursor Adapter ForecastAdapter
+//    SimpleCursorAdapter mForecastAdapter;
+
+    //Anahat - Now declaring mForecastAdapter variable as ForecastAdaptor
+    ForecastAdapter mForecastAdapter;
 
 
     public ForecastFragment() {
@@ -133,6 +139,10 @@ public class ForecastFragment extends Fragment implements LoaderManager.LoaderCa
         //Anahat - Commenting out the ArrayAdapter initliazation because we want to initialize mForecastAdapter as SimpleCursorAdapter object
 //        mForecastAdapter = new ArrayAdapter<String>(getActivity(), R.layout.list_item_forecast_1, R.id.list_item_forecast_textview_1, new ArrayList<String>()/*weekForecast*/);
 
+        // Anahat - IMPORTANT - the use of SimpleCursorAdapter is commented out below because we are now using our own adapter so that we can have
+        //Anahat - data bound to our custom views..
+        /*
+
         //Anahat Initializing mForecastAdapter as SimpleCursorAdapter object
         mForecastAdapter = new SimpleCursorAdapter(getActivity(),
                                                    R.layout.list_item_forecast_1,
@@ -172,6 +182,11 @@ public class ForecastFragment extends Fragment implements LoaderManager.LoaderCa
             }
         });
 
+        */
+
+        // Anahat - Using the custom adapter ForecastAdapter now to bind the data values to the view.
+        mForecastAdapter = new ForecastAdapter(getActivity(), null, 0);
+
 
         //Anahat - now bind the adapter to the view. This is because nowhere we have defined how this data is associated with the view
         //Anahat - First find the view in the hierarchy of layout i.e. in fragment_main xml
@@ -188,8 +203,13 @@ public class ForecastFragment extends Fragment implements LoaderManager.LoaderCa
                 //Anahat - Commenting out the code line below which was used when we were using arrayAdapter. Now that we are using SimpleCursorAdapter, we do not need this line.
 //                String weatherString = (String)adapterView.getItemAtPosition(i);
 
-                //Anahat - Getting data from the SimpleCursorAdapter
-                SimpleCursorAdapter adapter = (SimpleCursorAdapter) adapterView.getAdapter();
+                //Anahat - Getting data from the SimpleCursorAdapter. Adapters are used because they cache data in the app memory. Also, adapters fill in list items one by one.
+                //Anahat Commenting out the line below because we are using custom adapter ForecastAdapter
+//                SimpleCursorAdapter adapter = (SimpleCursorAdapter) adapterView.getAdapter();
+
+                //Anahat - Getting data from the ForecastAdapter. Adapters are used because they cache data in the app memory. Also, adapters fill in list items one by one.
+                ForecastAdapter adapter = (ForecastAdapter) adapterView.getAdapter();
+
                 Cursor weatherCursor = adapter.getCursor();
                 if (weatherCursor != null && weatherCursor.moveToPosition(i)){
 
@@ -262,7 +282,7 @@ public class ForecastFragment extends Fragment implements LoaderManager.LoaderCa
     public void onStart(){
         super.onStart();
         //Anahat - Getting rid of the line below so that the data does not get refreshed every time onStart method is called.
-//        updateWeather();
+        updateWeather();
     }
 
     //Anahat - Here making sure that when this activity resumes after preference changes, the weather location is picked up again and weather info is refreshed
@@ -303,13 +323,14 @@ public class ForecastFragment extends Fragment implements LoaderManager.LoaderCa
                 null,
                 null,
                 sortOrder
-        );
+                );
     }
 
     //Anahat This callback method is called when the loading of cursor from DB is complete and the data is ready for UI to consume
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
         //Anahat - Swapping the cursor that mForecastAdapter will now use to populate the UI textViews
+        int i = data.getCount();
         mForecastAdapter.swapCursor(data);
     }
 
