@@ -1,6 +1,9 @@
 package com.example.android.sunshine1;
 
+import android.annotation.TargetApi;
+import android.content.Intent;
 import android.content.SharedPreferences;
+import android.os.Build;
 import android.os.Bundle;
 import android.preference.ListPreference;
 import android.preference.Preference;
@@ -100,4 +103,12 @@ public class SettingsActivity extends PreferenceActivity
         return true;
     }
 
+    //Anahat - The method below is important. It is to make sure that the parent activity (activity taht called settings activity) is retained by the OS and the intent of that activity is also retained.
+    //Anahat - Also, this method was added only in Jelly beans
+
+    @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
+    @Override
+    public Intent getParentActivityIntent() {
+        return super.getParentActivityIntent().addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+    }
 }

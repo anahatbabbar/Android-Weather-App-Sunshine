@@ -54,9 +54,16 @@ import java.text.SimpleDateFormat;
  */
 public class ForecastFragment extends Fragment implements LoaderManager.LoaderCallbacks<Cursor>{
 
+    private ListView listContainer;
+
     //Anahat - Adding stuff for LoaderManager to work
     private static final int FORECAST_LOADER = 0;
     private String mLocation;
+
+    private boolean mUseTodayLayout;
+
+    //Anahat - Constant for savedInstanceState
+    private final String SELECTED_KEY = "list_selection_position";
 
     // For the forecast view we're showing only a small subset of the stored data.
     // Specify the columns we need.
@@ -99,6 +106,22 @@ public class ForecastFragment extends Fragment implements LoaderManager.LoaderCa
     //Anahat - Now declaring mForecastAdapter variable as ForecastAdaptor
     ForecastAdapter mForecastAdapter;
 
+    //Anahat - Declaring position variable to persist the list position value across multiple activities
+    int mPosition;
+
+    //Anahat - IMPORTANT. Creating a callback Interface that needs to be implemented by all activities that would use this fragment
+    /**
+     * A callback interface that all activities containing this fragment must
+     * implement. This mechanism allows activities to be notified of item
+     * selections.
+     */
+    public interface Callback{
+        /**
+         * Callback for when an item has been selected.
+         */
+        public void onItemSelected(String date);
+    }
+
 
     public ForecastFragment() {
     }
@@ -111,6 +134,15 @@ public class ForecastFragment extends Fragment implements LoaderManager.LoaderCa
         super.onCreate(savedInstanceState);
         //Anahat - to set that the fragment has a options menu
         setHasOptionsMenu(true);
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        //Anahat - Saving the position of list selection so that even when the orientation of device is changed, the position is persisted in the new activity
+        if(mPosition != ListView.INVALID_POSITION){
+            outState.putString(SELECTED_KEY,Integer.toString(mPosition));
+        }
+        super.onSaveInstanceState(outState);
     }
 
     @Override
@@ -187,10 +219,13 @@ public class ForecastFragment extends Fragment implements LoaderManager.LoaderCa
         // Anahat - Using the custom adapter ForecastAdapter now to bind the data values to the view.
         mForecastAdapter = new ForecastAdapter(getActivity(), null, 0);
 
+        //Anahat - Setting the mUseTodayLayout variable in ForecastAdapter that figures out how to display today's list item, which is different
+        //Anahat - for tablets and phones.
+        mForecastAdapter.setUseTodayLayout(mUseTodayLayout);
 
         //Anahat - now bind the adapter to the view. This is because nowhere we have defined how this data is associated with the view
         //Anahat - First find the view in the hierarchy of layout i.e. in fragment_main xml
-        ListView listContainer = (ListView) rootView.findViewById(R.id.listview_forecast);
+        listContainer = (ListView) rootView.findViewById(R.id.listview_forecast);
         //Anahat - now bind the data to the view
         listContainer.setAdapter(mForecastAdapter);
 
@@ -232,14 +267,28 @@ public class ForecastFragment extends Fragment implements LoaderManager.LoaderCa
                      toast.show();
                      */
 
-                    //Anahat - Calling explicit intent to call DetailActivity
-                    Intent intent = new Intent(getActivity(), DetailActivity.class);
-                    intent.putExtra(DetailActivity.DATE_KEY, dateString/*weatherString*/);
-                    //Anahat - StartActivity method below calls the onCreate method of DetailActivity.
-                    startActivity(intent);
+                    // Anahat - Commenting out the code below of calling the activity using intents straight from the fragment for phone implementation.
+                    //Anahat - Now using activity callback to decide what needs to be done on item selection based on device settings.
+//                    //Anahat - Calling explicit intent to call DetailActivity
+//                    Intent intent = new Intent(getActivity(), DetailActivity.class);
+//                    intent.putExtra(DetailActivity.DATE_KEY, dateString/*weatherString*/);
+//                    //Anahat - StartActivity method below calls the onCreate method of DetailActivity.
+//                    startActivity(intent);
+
+                    //Anahat - Calling callback method of the activity
+                    Callback cb = (Callback)getActivity();
+                    cb.onItemSelected(dateString);
                 }
+                //Anahat - Saving the position in class instance variable so that if the orientation of device is changed, the selection in the list is persisted.
+                mPosition = i;
             }
         });
+
+        //Anahat - Checking if the savedStateInstance has value for mPosition. If yes, then the orientation of the device was recently changed. Get the last position and set mPosition
+        if(savedInstanceState != null && savedInstanceState.containsKey(SELECTED_KEY)){
+            mPosition = Integer.parseInt(savedInstanceState.getString(SELECTED_KEY));
+        }
+
         return rootView;
     }
 
@@ -276,6 +325,17 @@ public class ForecastFragment extends Fragment implements LoaderManager.LoaderCa
 
         //Anahat - Calling seperated out Async task. See the extra parameters passed in constructor.
          new FetchWeatherTask(getActivity()/*,mForecastAdapter*/).execute(locationValue);
+    }
+
+    //Anahat - Setting the mUseTodayLayout variable which is then passed to ForecastAdapter that figures out how to display today's list item, which is different
+    //Anahat - for tablets and phones.
+    public void setUseTodayLayout(boolean useTodayLayout){
+        mUseTodayLayout = useTodayLayout;
+        //Anahat - Checking if mForecastAdapter is initialized or not. It may NOT be initialized yet as create method of MainActivity may have run before onCreateView method of this fragment ran completely.
+        //Anahat - In that case, mForecastAdapter method is directly called from onCreateView method of this forecastFragment.
+        if(mForecastAdapter != null){
+            mForecastAdapter.setUseTodayLayout(mUseTodayLayout);
+        }
     }
 
     //Anahat - adding onStart method that is called the moment the app is launched
@@ -332,6 +392,11 @@ public class ForecastFragment extends Fragment implements LoaderManager.LoaderCa
         //Anahat - Swapping the cursor that mForecastAdapter will now use to populate the UI textViews
         int i = data.getCount();
         mForecastAdapter.swapCursor(data);
+
+        //Anahat - Check if this load is for a new activity that is created when the orientation of the device is changed
+        if(mPosition != ListView.INVALID_POSITION){
+            listContainer.setSelection(mPosition);
+        }
     }
 
     @Override

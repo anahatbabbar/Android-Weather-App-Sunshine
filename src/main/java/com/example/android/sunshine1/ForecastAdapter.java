@@ -21,6 +21,8 @@ public class ForecastAdapter extends CursorAdapter{
     private static final int VIEW_TYPE_FUTURE_DAY = 1;
     private static final int VIEW_TYPE_COUNT = 2;
 
+    private boolean mUseTodayLayout;
+
     // Anahat - Implementing View Holder pattern to cache the textview resources id for quick access. Since these textview resources are needed for ALL records in the list, we stored them here.
     /**
      * Cache of the children views for a forecast list item.
@@ -142,10 +144,15 @@ public class ForecastAdapter extends CursorAdapter{
         return VIEW_TYPE_COUNT;
     }
 
+    //Anahat - This method is used in forecastfragment to set the mUseTodayLayout variable which dictates how todays layout will be as tablet and phone layouts are different for today in the list.
+    public void setUseTodayLayout(boolean useTodayLayout){
+        mUseTodayLayout = useTodayLayout;
+    }
+
     //Anahat - Overriding the method below that returns the view type id.
     @Override
     public int getItemViewType(int position) {
-        return position == 0 ? VIEW_TYPE_TODAY : VIEW_TYPE_FUTURE_DAY;
+        return (position == 0 && mUseTodayLayout) ? VIEW_TYPE_TODAY : VIEW_TYPE_FUTURE_DAY;
     }
 
 }

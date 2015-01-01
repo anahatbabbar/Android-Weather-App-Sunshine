@@ -2,6 +2,7 @@ package com.example.android.sunshine1;
 
 import android.content.Intent;
 import android.database.Cursor;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.CursorLoader;
@@ -34,9 +35,24 @@ public class DetailActivity extends ActionBarActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_detail);
+
+        //Anahat - Getting the weather/date string from Main Activity using the Intent passed to the activity.
+        Intent intent = this.getIntent();
+
+        //Anahat - Search for the date Bundle corresponding to EXTRA_TEXT added by calling activity
+        String dateStr = intent.getStringExtra(DATE_KEY);
+
+        //Anahat - Now putting this intent data in a bundle argument that will be passed to DetailFragment
+        Bundle args = new Bundle();
+        args.putString(DATE_KEY, dateStr);
+
+        //Anahat - Setting the args on the DetailFragment object
+        DetailFragment df = new DetailFragment();
+        df.setArguments(args);
+
         if (savedInstanceState == null) {
             getSupportFragmentManager().beginTransaction()
-                    .add(R.id.container, new DetailFragment())
+                    .add(R.id.weather_detail_container, df)
                     .commit();
         }
     }

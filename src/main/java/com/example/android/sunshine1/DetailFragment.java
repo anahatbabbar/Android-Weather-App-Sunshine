@@ -78,8 +78,14 @@ public class DetailFragment extends Fragment implements LoaderManager.LoaderCall
             strLocation = savedInstanceState.getString(LOCATION_KEY);
         }
 
-        //Anahat - Initializing the loader, which will call the loader background thread
-        getLoaderManager().initLoader(DETAIL_LOADER, null, this);
+        Bundle bundle = getArguments();
+
+//        Intent intent = getActivity().getIntent();
+//        if(intent != null && intent.hasExtra(DetailActivity.DATE_KEY)) {
+        if(bundle != null && bundle.containsKey(DetailActivity.DATE_KEY)){
+            //Anahat - Initializing the loader, which will call the loader background thread
+            getLoaderManager().initLoader(DETAIL_LOADER, null, this);
+        }
     }
 
     //Anahat - Here making sure that when this activity resumes after preference changes, the weather location is picked up again and weather info is refreshed
@@ -87,7 +93,10 @@ public class DetailFragment extends Fragment implements LoaderManager.LoaderCall
     @Override
     public void onResume() {
         super.onResume();
-        if (strLocation != null && !strLocation.equals(Utility.getPreferredLocation(getActivity()))) {
+
+        Bundle bundle = new Bundle();
+//        Intent intent = getActivity().getIntent();
+        if (bundle != null && bundle.containsKey(DetailActivity.DATE_KEY) && strLocation != null && !strLocation.equals(Utility.getPreferredLocation(getActivity()))) {
             getLoaderManager().restartLoader(DETAIL_LOADER, null, this);
         }
     }
@@ -150,11 +159,14 @@ public class DetailFragment extends Fragment implements LoaderManager.LoaderCall
         // This is called when a new Loader needs to be created.  This
         // fragment only uses one loader, so we don't care about checking the id.
 
-        //Anahat - Getting the weather/date string from Main Activity using the Intent passed to the activity.
-        Intent intent = getActivity().getIntent();
+        //Anahat - Replacing the code below to read the intent data to reading the arguments of the fragment
+//        //Anahat - Getting the weather/date string from Main Activity using the Intent passed to the activity.
+//        Intent intent = getActivity().getIntent();
+//        //Anahat - Search for the date Bundle corresponding to EXTRA_TEXT added by calling activity
+//        dateStr = intent.getStringExtra(DATE_KEY);
 
-        //Anahat - Search for the date Bundle corresponding to EXTRA_TEXT added by calling activity
-        dateStr = intent.getStringExtra(DATE_KEY);
+        Bundle bundle = this.getArguments();
+        dateStr = bundle.getString(DetailActivity.DATE_KEY);
 
         String[] FORECAST_COLUMNS = {
                 // In this case the id needs to be fully qualified with a table name, since

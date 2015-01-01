@@ -29,19 +29,69 @@ import java.util.List;
 import java.util.Arrays;
 
 
-public class MainActivity extends ActionBarActivity {
+public class MainActivity extends ActionBarActivity implements ForecastFragment.Callback{
 
     private static String LOG_TAG = MainActivity.class.toString();
+
+    boolean mTwoPane;
+
+    //Anahat - Defining the method of the custom interface Callback of ForecastFragment
+    @Override
+    public void onItemSelected(String date) {
+        if(mTwoPane){
+            //Anahat - Here the Activity already exists. Just detail fragment is being replaced or added running in the Main Activity for tablets.
+            Bundle args = new Bundle();
+            args.putString(DetailActivity.DATE_KEY, date);
+            DetailFragment df = new DetailFragment();
+            df.setArguments(args);
+            //Anahat - Replacing the detail fragment now
+            getSupportFragmentManager().beginTransaction().replace(R.id.weather_detail_container, df).commit();
+
+        }
+        else{
+            //Anahat - Here detail ACTIVITY is being called from Main ACTIVITY running on a Phone
+             Intent intent = new Intent(this, DetailActivity.class);
+             intent.putExtra(DetailActivity.DATE_KEY, date/*weatherString*/);
+             //Anahat - StartActivity method below calls the onCreate method of DetailActivity.
+             startActivity(intent);
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        if (savedInstanceState == null) {
+
+        // Anahat - Commenting out the below line now that we are using 2 pane view and statically attaching forecastFragment to the layout
+//        if (savedInstanceState == null) {
+//            getSupportFragmentManager().beginTransaction()
+//                    .add(R.id.container, new ForecastFragment())
+//                    .commit();
+//        }
+
+        //Anahat - Now check if this onCreate activity method is called for 2 pane layouts (sw-600dp) or a single pane layout
+        if(findViewById(R.id.weather_detail_container) != null){
+            //Anahat - this means the onCreate is called for 2 pane device
+            mTwoPane = true;
+
+            //Anahat In two pane mode add or replace the detail view in the activity using fragment transaction
+            if (savedInstanceState == null) {
             getSupportFragmentManager().beginTransaction()
-                    .add(R.id.container, new ForecastFragment())
+                    .replace(R.id.weather_detail_container, new DetailFragment())
                     .commit();
+            }
         }
+        else{
+            mTwoPane = false;
+        }
+
+        //Anahat - Telling the forecast fragment whether it is one pane or 2 pane mode. This will dictate
+        // how today's whether in the list will be displayed (different between phone and tablet)
+        //Anahat - Now using getSupportFragmentManager to retrieve the already created forecastFragment
+        ForecastFragment forecastFragment = (ForecastFragment) getSupportFragmentManager().findFragmentById(R.id.fragment_forecast);
+        forecastFragment.setUseTodayLayout(!mTwoPane);
+
+
         Log.v(LOG_TAG, "This is from onCreate() method");
     }
 
